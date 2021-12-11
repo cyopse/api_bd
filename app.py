@@ -1,13 +1,20 @@
 from flask import Flask, request
 from flask_restful import Resource, Api
+from flask_caching import Cache
 from werkzeug.wrappers import response
 from models import Medicos, Especializacoes, Usuarios
 from flask_httpauth import HTTPBasicAuth
 
-
+config = {
+    "DEBUG": True,
+    "CACHE_TYPE": "SimpleCache",
+    "CACHE_DEFAULT_TIMEOUT": 100
+}
 auth = HTTPBasicAuth()
 app = Flask(__name__)
+app.config.from_mapping(config)
 api = Api(app)
+cache = Cache(app)
 
 @auth.verify_password
 def verificacao(login, senha):
@@ -19,6 +26,7 @@ def verificacao(login, senha):
 class Medico(Resource):
     #Get
     @auth.login_required
+    @cache.cached(timeout=10, key_prefix="medico_dados")
     def get(self, nome):
         medico = Medicos.query.filter_by(nome=nome).first()
         try:
@@ -59,6 +67,7 @@ class Medico(Resource):
 
 class ListaMedicos(Resource):
     #GetAll
+    @cache.cached(timeout=20, key_prefix="medicos")
     def get(self):
         medicos = Medicos.query.all()
         response = [{'id':i.id, 'nome':i.nome, 'idade':i.idade} for i in medicos]
@@ -79,6 +88,7 @@ class ListaMedicos(Resource):
 
 class ListaEspecializacoes(Resource):
     #GetAll
+    @cache.cached(timeout=10, key_prefix="especializacoes")
     def get(self):
         especializacoes = Especializacoes.query.all()
         response = [{'id':i.id, 'nome':i.nome, 'medico':i.medico.nome} for i in especializacoes]
