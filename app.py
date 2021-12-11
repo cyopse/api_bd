@@ -1,3 +1,4 @@
+from datetime import time
 from flask import Flask, request
 from flask_restful import Resource, Api
 from flask_caching import Cache
@@ -43,6 +44,7 @@ class Medico(Resource):
             }
         return response
     #Put
+    @auth.login_required
     def put(self, nome):
         medico = Medicos.query.filter_by(nome=nome).first()
         dados = request.json
@@ -58,6 +60,7 @@ class Medico(Resource):
         }
         return response
     #Delete
+    @auth.login_required
     def delete(self, nome):
         medico = Medicos.query.filter_by(nome=nome).first()
         mensagem = 'Medico {} excluido com sucesso'.format(medico.nome)
@@ -74,6 +77,7 @@ class ListaMedicos(Resource):
         print(response)
         return response
     #Post
+    @auth.login_required
     def post(self):
         dados = request.json
         medico = Medicos(nome=dados['nome'], idade=dados['idade'])
@@ -85,6 +89,51 @@ class ListaMedicos(Resource):
         }
         return response
 
+class Especializacao(Resource):
+    #Get
+    @cache.cached(timeout=10, key_prefix="especializacao_dados")
+    def get(self, id):
+        especializacao = Especializacoes.query.filter_by(id = id).first()
+        
+        try:
+            response = { 
+                'id':especializacao.id,
+                'nome':especializacao.nome
+            }
+            return response
+        except AttributeError:
+            response = {
+                'status':'erro',
+                'mensagem':'Especialização nao encontrada'
+            }
+        return response
+    
+    #Put
+    @auth.login_required
+    def put(self, id):
+        especializacao = Especializacoes.query.filter_by(id = id).first()
+        dados = request.json
+
+        if 'nome' in dados:
+            especializacao.nome = dados['nome']
+
+        especializacao.salvar()
+
+        response = { 
+            'id':especializacao.id,
+            'nome':especializacao.nome
+        }
+
+        return response
+
+    #Delete
+    @auth.login_required
+    def delete(self, id):
+        especializacao = Especializacoes.query.filter_by(id = id).first()
+        mensagem = 'Especialização {} excluida com sucesso'.format(especializacao.nome)
+        especializacao.delete()
+        return {'status':'sucesso', 'mensagem':mensagem}
+
 
 class ListaEspecializacoes(Resource):
     #GetAll
@@ -94,6 +143,7 @@ class ListaEspecializacoes(Resource):
         response = [{'id':i.id, 'nome':i.nome, 'medico':i.medico.nome} for i in especializacoes]
         return response
     #Post
+    @auth.login_required
     def post(self):
         dados = request.json
         medico = Medicos.query.filter_by(nome=dados['medico']).first()
@@ -108,6 +158,7 @@ class ListaEspecializacoes(Resource):
 
 api.add_resource(Medico, '/med/<string:nome>/')
 api.add_resource(ListaMedicos, '/med/')
+api.add_resource(Especializacao, '/specs/<int:id>/')
 api.add_resource(ListaEspecializacoes, '/specs/')
 
 if __name__ == '__main__':
