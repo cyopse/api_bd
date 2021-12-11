@@ -1,13 +1,24 @@
 from flask import Flask, request
 from flask_restful import Resource, Api
 from werkzeug.wrappers import response
-from models import Medicos, Especializacoes
+from models import Medicos, Especializacoes, Usuarios
+from flask_httpauth import HTTPBasicAuth
 
+
+auth = HTTPBasicAuth()
 app = Flask(__name__)
 api = Api(app)
 
+@auth.verify_password
+def verificacao(login, senha):
+    print('validação de usuário')
+    if not (login, senha):
+        return False
+    return Usuarios.query.filter_by(login=login, senha=senha).first()
+
 class Medico(Resource):
     #Get
+    @auth.login_required
     def get(self, nome):
         medico = Medicos.query.filter_by(nome=nome).first()
         try:
