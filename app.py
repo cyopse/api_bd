@@ -26,15 +26,14 @@ def verificacao(login, senha):
 
 class Medico(Resource):
     #Get
-    @auth.login_required
     @cache.cached(timeout=10, key_prefix="medico_dados")
-    def get(self, nome):
-        medico = Medicos.query.filter_by(nome=nome).first()
+    def get(self, id):
+        medico = Medicos.query.filter_by(id=id).first()
         try:
             response = {
+                'id':medico.id,
                 'nome':medico.nome,
-                'idade':medico.idade,
-                'id':medico.id
+                'idade':medico.idade
             }
             return response
         except AttributeError:
@@ -45,8 +44,8 @@ class Medico(Resource):
         return response
     #Put
     @auth.login_required
-    def put(self, nome):
-        medico = Medicos.query.filter_by(nome=nome).first()
+    def put(self, id):
+        medico = Medicos.query.filter_by(id=id).first()
         dados = request.json
         if 'nome' in dados:
             medico.nome = dados['nome']
@@ -61,8 +60,8 @@ class Medico(Resource):
         return response
     #Delete
     @auth.login_required
-    def delete(self, nome):
-        medico = Medicos.query.filter_by(nome=nome).first()
+    def delete(self, id):
+        medico = Medicos.query.filter_by(id=id).first()
         mensagem = 'Medico {} excluido com sucesso'.format(medico.nome)
         medico.delete()
         return {'status':'sucesso', 'mensagem':mensagem}
@@ -156,10 +155,10 @@ class ListaEspecializacoes(Resource):
         }
         return response
 
-api.add_resource(Medico, '/med/<string:nome>/')
-api.add_resource(ListaMedicos, '/med/')
-api.add_resource(Especializacao, '/specs/<int:id>/')
-api.add_resource(ListaEspecializacoes, '/specs/')
+api.add_resource(Medico, '/medicos/<int:id>/')
+api.add_resource(ListaMedicos, '/medicos/')
+api.add_resource(Especializacao, '/especializacoes/<int:id>/')
+api.add_resource(ListaEspecializacoes, '/especializacoes/')
 
 if __name__ == '__main__':
     app.run(debug=True)
