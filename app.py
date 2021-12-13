@@ -4,25 +4,29 @@ from flask_restful import Resource, Api
 from flask_caching import Cache
 from werkzeug.wrappers import response
 from models import Medicos, Especializacoes, Usuarios
-from flask_httpauth import HTTPBasicAuth
+from flask_jwt import JWT, jwt_required
 
 config = {
     "DEBUG": True,
     "CACHE_TYPE": "SimpleCache",
-    "CACHE_DEFAULT_TIMEOUT": 100
+    "CACHE_DEFAULT_TIMEOUT": 100,
+    'SECRET_KEY': 'TEST'
 }
-auth = HTTPBasicAuth()
 app = Flask(__name__)
 app.config.from_mapping(config)
 api = Api(app)
 cache = Cache(app)
 
-@auth.verify_password
-def verificacao(login, senha):
-    print('validação de usuário')
-    if not (login, senha):
+def verify(username, password):
+    if not (username, password):
         return False
-    return Usuarios.query.filter_by(login=login, senha=senha).first()
+    return Usuarios.query.filter(Usuarios.login==username, Usuarios.senha==password).first()
+
+def identity(payload):
+    user_id = payload['identity']
+    return {"user_id": user_id}
+
+jwt = JWT(app, verify, identity)
 
 class Medico(Resource):
     #Get
@@ -43,7 +47,7 @@ class Medico(Resource):
             }
         return response
     #Put
-    @auth.login_required
+    @jwt_required()
     def put(self, id):
         medico = Medicos.query.filter_by(id=id).first()
         dados = request.json
@@ -59,7 +63,7 @@ class Medico(Resource):
         }
         return response
     #Delete
-    @auth.login_required
+    @jwt_required()
     def delete(self, id):
         medico = Medicos.query.filter_by(id=id).first()
         mensagem = 'Medico {} excluido com sucesso'.format(medico.nome)
@@ -76,7 +80,7 @@ class ListaMedicos(Resource):
         print(response)
         return response
     #Post
-    @auth.login_required
+    @jwt_required()
     def post(self):
         dados = request.json
         medico = Medicos(nome=dados['nome'], idade=dados['idade'])
@@ -108,7 +112,7 @@ class Especializacao(Resource):
         return response
     
     #Put
-    @auth.login_required
+    @jwt_required()
     def put(self, id):
         especializacao = Especializacoes.query.filter_by(id = id).first()
         dados = request.json
@@ -126,7 +130,7 @@ class Especializacao(Resource):
         return response
 
     #Delete
-    @auth.login_required
+    @jwt_required()
     def delete(self, id):
         especializacao = Especializacoes.query.filter_by(id = id).first()
         mensagem = 'Especialização {} excluida com sucesso'.format(especializacao.nome)
@@ -142,7 +146,7 @@ class ListaEspecializacoes(Resource):
         response = [{'id':i.id, 'nome':i.nome, 'medico':i.medico.nome} for i in especializacoes]
         return response
     #Post
-    @auth.login_required
+    @jwt_required()
     def post(self):
         dados = request.json
         medico = Medicos.query.filter_by(nome=dados['medico']).first()
