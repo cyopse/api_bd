@@ -30,15 +30,20 @@ jwt = JWT(app, verify, identity)
 
 class Medico(Resource):
     #Get
-    @cache.cached(timeout=10, key_prefix="medico_dados")
     def get(self, id):
         medico = Medicos.query.filter_by(id=id).first()
+        especializacao = Especializacoes.query.filter_by(medico_id=id).first()
         try:
             response = {
                 'id':medico.id,
                 'nome':medico.nome,
-                'idade':medico.idade
+                'idade':medico.idade,
             }
+            if (especializacao):
+                response['especialização'] = {
+                    'id': especializacao.id,
+                    'nome': especializacao.nome 
+                }
             return response
         except AttributeError:
             response = {
@@ -94,15 +99,20 @@ class ListaMedicos(Resource):
 
 class Especializacao(Resource):
     #Get
-    @cache.cached(timeout=10, key_prefix="especializacao_dados")
     def get(self, id):
         especializacao = Especializacoes.query.filter_by(id = id).first()
         
         try:
+            medico = Medicos.query.filter_by(id=especializacao.medico_id).first()
             response = { 
                 'id':especializacao.id,
                 'nome':especializacao.nome
             }
+            if(medico):
+                response['medico'] = {
+                    'id': medico.id,
+                    'nome': medico.nome
+                }
             return response
         except AttributeError:
             response = {
@@ -149,14 +159,19 @@ class ListaEspecializacoes(Resource):
     @jwt_required()
     def post(self):
         dados = request.json
-        medico = Medicos.query.filter_by(nome=dados['medico']).first()
+        medico = Medicos.query.filter_by(id=dados['medico_id']).first()
         especializacao = Especializacoes(nome=dados['nome'], medico=medico)
         especializacao.salvar()
         response = {
-            'medico':especializacao.medico.nome,
+            'id':especializacao.id,
             'nome':especializacao.nome,
-            'id':especializacao.id
         }
+        if (medico): 
+            response['medico'] = {
+                'id': medico.id,
+                'nome': medico.nome
+            }
+        
         return response
 
 api.add_resource(Medico, '/medicos/<int:id>/')
